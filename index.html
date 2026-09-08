@@ -133,7 +133,20 @@
     color:#20242a;background:#fff;border:none;border-radius:999px;
     padding:15px 30px;cursor:pointer;-webkit-tap-highlight-color:transparent}
   .introbtn:active{transform:scale(.97)}
+  .introbtn.secondary{margin-top:12px;background:transparent;color:#fff;
+    border:1px solid rgba(255,255,255,.5)}
+  .introbtn.secondary:active{background:rgba(255,255,255,.12)}
   .introsmall{font-family:var(--sans);font-size:11px;opacity:.6;margin:20px 0 0}
+
+  /* back to Moa's palette — appears on the field only after a visitor upload */
+  #backOriginal{display:none;position:fixed;z-index:20;left:50%;transform:translateX(-50%);
+    bottom:calc(24px + env(safe-area-inset-bottom));
+    background:none;border:none;color:#fff;opacity:.7;
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;padding:8px 10px;
+    text-shadow:0 1px 3px rgba(0,0,0,.4)}
+  #backOriginal:active{opacity:1}
+  body.phone.started.recolored #backOriginal{display:block}
 
   /* floating upload button */
   body.phone.started #fab{display:flex;position:fixed;z-index:20;
@@ -193,6 +206,7 @@
       <div class="introtitle">I NEEDED A PLACE TO BREATHE</div>
       <p class="introtext">Upload a photo to color the space.</p>
       <button class="introbtn" id="introStart">Choose a photo</button>
+      <button class="introbtn secondary" id="introOriginal">Moa's palette</button>
       <p class="introsmall">your photo isn't saved — only its colors are used</p>
       <button class="introabout" id="introAbout">About this work</button>
     </div>
@@ -204,6 +218,7 @@
       <circle cx="12" cy="13" r="3.2"/>
     </svg>
   </button>
+  <button id="backOriginal">back to Moa's palette</button>
 
   <!-- about overlay -->
   <div id="about">
@@ -727,20 +742,39 @@ const isPhone = (()=>{
   return ua || (coarse && small);
 })();
 
+/* restore Jaime & Moa's original palette (the default for mode 0) */
+function restoreOriginal(){
+  PALETTES[mode]=JSON.parse(JSON.stringify(PALETTES_DEFAULT[mode]));
+  syncColorsFromMode();
+  refreshSwatches();
+  document.body.classList.remove('recolored');
+}
+
 if(isPhone){
   document.body.classList.add('phone');
   const intro=document.getElementById('intro');
   const introStart=document.getElementById('introStart');
+  const introOriginal=document.getElementById('introOriginal');
   const fab=document.getElementById('fab');
+  const backOriginal=document.getElementById('backOriginal');
   // both intro button and FAB open the native photo picker
   introStart.addEventListener('click',()=>fileInp.click());
   fab.addEventListener('click',()=>fileInp.click());
+  // "Moa's palette" — enter the field on the original colors, no upload
+  introOriginal.addEventListener('click',()=>{
+    restoreOriginal();
+    document.body.classList.add('started');
+  });
+  // back to the original from the field
+  backOriginal.addEventListener('click',restoreOriginal);
   // on phone, a picked photo extracts AND applies immediately, then reveals the field
   fileInp.addEventListener('change',()=>{
-    // loadFile already ran via the desktop listener; apply once extraction is ready
     // extractColors is synchronous once the image decodes, so defer apply to next tick
     const applyWhenReady=()=>{
-      if(extracted.length){ applyExtracted(); document.body.classList.add('started'); }
+      if(extracted.length){
+        applyExtracted();
+        document.body.classList.add('started','recolored');
+      }
       else setTimeout(applyWhenReady,60);
     };
     setTimeout(applyWhenReady,60);
