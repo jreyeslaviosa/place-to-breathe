@@ -152,6 +152,31 @@
   }
   .rotinner{text-align:center;color:#fff;opacity:.85}
   .rotinner p{font-family:var(--sans);font-size:14px;letter-spacing:.04em;margin-top:16px}
+
+  /* about: link on intro */
+  .introabout{display:inline-block;margin-top:28px;background:none;border:none;
+    color:#fff;opacity:.62;font-family:var(--sans);font-size:12px;letter-spacing:.06em;
+    text-decoration:underline;text-underline-offset:3px;cursor:pointer;
+    -webkit-tap-highlight-color:transparent}
+  .introabout:active{opacity:.9}
+
+  /* about overlay */
+  #about{display:none;position:fixed;inset:0;z-index:60;
+    align-items:center;justify-content:center;padding:26px;
+    background:rgba(6,6,9,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  body.about-open #about{display:flex}
+  .aboutcard{position:relative;max-width:440px;max-height:86vh;overflow-y:auto;
+    background:#fbfbfa;color:#20242a;border-radius:10px;padding:34px 30px 32px;
+    box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  #aboutClose{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;background:none;border:none;
+    color:#8a8f96;cursor:pointer}
+  #aboutClose:hover{color:#20242a;background:#f0f0ee}
+  .abouttitle{font-family:var(--mono);font-size:15px;letter-spacing:.06em;font-weight:600;
+    margin:0 0 14px;padding-right:30px}
+  .aboutmeta{font-family:var(--sans);font-size:12px;line-height:1.6;color:#6b7178;
+    margin:0 0 20px;letter-spacing:.02em}
+  .abouttext{font-family:var(--sans);font-size:14px;line-height:1.72;color:#33383f;margin:0}
 </style>
 </head>
 <body>
@@ -169,6 +194,7 @@
       <p class="introtext">Upload a photo to color the space.</p>
       <button class="introbtn" id="introStart">Choose a photo</button>
       <p class="introsmall">your photo isn't saved — only its colors are used</p>
+      <button class="introabout" id="introAbout">About this work</button>
     </div>
   </div>
   <button id="fab" aria-label="upload a photo">
@@ -178,6 +204,27 @@
       <circle cx="12" cy="13" r="3.2"/>
     </svg>
   </button>
+
+  <!-- about overlay -->
+  <div id="about">
+    <div class="aboutcard">
+      <button id="aboutClose" aria-label="close">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <h2 class="abouttitle">I needed a place to breathe</h2>
+      <p class="aboutmeta">Jaime Reyes &amp; Moa · July 2026<br>
+        Generative code and custom digital interface</p>
+      <p class="abouttext">Created in the wake of the devastation in La Guaira and Caracas, this
+        generative artwork serves as a digital sanctuary. Designed by the artist to capture the
+        sensory memories of their Venezuelan birthplace—the ocean breeze, the sunrises, and the
+        sounds—the piece was brought to life in collaboration with their daughter, Moa. While the
+        artist, who is colorblind, wrote the code and built a custom suite of tools, Moa translated
+        her parent's stories into the vibrant color palette you see, bridging physical distance and
+        generations through technology and art.</p>
+    </div>
+  </div>
+
   <div id="rotate">
     <div class="rotinner">
       <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor"
@@ -662,6 +709,15 @@ function applyExtracted(){
   refreshSwatches();
 }
 applyBtn.addEventListener('click',applyExtracted);
+
+/* ---------- about overlay ---------- */
+const aboutEl=document.getElementById('about');
+function openAbout(){document.body.classList.add('about-open');}
+function closeAbout(){document.body.classList.remove('about-open');}
+document.getElementById('aboutClose').addEventListener('click',closeAbout);
+aboutEl.addEventListener('click',e=>{if(e.target===aboutEl)closeAbout();}); // tap backdrop
+document.getElementById('introAbout')?.addEventListener('click',openAbout);
+window.addEventListener('keydown',e=>{if(e.key==='Escape')closeAbout();});
 
 /* ---------- phone experience ---------- */
 const isPhone = (()=>{
