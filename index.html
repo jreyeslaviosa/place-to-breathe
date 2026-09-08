@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>[ void ] — sunset field</title>
+<style>
+  :root{
+    --ink:#20242a;
+    --dim:#6b7178;
+    --faint:#a3a9b0;
+    --line:#e6e6e6;
+    --line2:#f0f0f0;
+    --panel:#fbfbfa;
+    --field:#eeeeec;
+    --accent:#c9772f;
+    --accent-soft:#f6ede2;
+    --sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SFMono-Regular","JetBrains Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#000;color:var(--ink);
+    font-family:var(--sans);font-size:12px;-webkit-font-smoothing:antialiased;overflow:hidden}
+
+  #stage{position:fixed;inset:0}
+  canvas#gl{width:100%;height:100%;display:block}
+
+  #title{position:fixed;left:20px;top:18px;color:#fff;letter-spacing:.34em;
+    font-family:var(--mono);font-size:10px;text-transform:uppercase;
+    mix-blend-mode:overlay;opacity:.9;pointer-events:none;transition:opacity .3s}
+  #clock{position:fixed;left:20px;bottom:18px;color:#fff;letter-spacing:.16em;
+    font-family:var(--mono);font-size:10px;text-transform:uppercase;
+    mix-blend-mode:overlay;opacity:.85;pointer-events:none;transition:opacity .3s}
+  body.hidden #title, body.hidden #clock{opacity:0}
+  /* fullscreen: no text at all */
+  :fullscreen #title, :fullscreen #clock, :fullscreen #hkey{opacity:0 !important}
+  :-webkit-full-screen #title, :-webkit-full-screen #clock, :-webkit-full-screen #hkey{opacity:0 !important}
+
+  /* flat light panel — no blur, minimal radius */
+  #panel{position:fixed;top:0;right:0;bottom:0;width:300px;
+    background:var(--panel);border-left:1px solid var(--line);
+    overflow-y:auto;overflow-x:hidden;
+    transition:transform .3s ease;
+    scrollbar-width:thin;scrollbar-color:#d5d5d3 transparent}
+  body.hidden #panel{transform:translateX(100%)}
+  #panel::-webkit-scrollbar{width:8px}
+  #panel::-webkit-scrollbar-thumb{background:#dcdcda;border-radius:0}
+
+  #hkey{position:fixed;top:18px;right:20px;font-family:var(--mono);font-size:10px;
+    letter-spacing:.14em;color:#fff;mix-blend-mode:overlay;opacity:0;
+    text-transform:uppercase;pointer-events:none;transition:opacity .3s}
+  body.hidden #hkey{opacity:.8}
+
+  .grp{border-bottom:1px solid var(--line2)}
+  .grp:last-child{border-bottom:none}
+  .grp > h3{margin:0;padding:14px 18px 12px;font-size:10px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--dim);display:flex;justify-content:space-between;
+    align-items:center;cursor:pointer;user-select:none;font-weight:600}
+  .grp > h3 .chev{color:var(--faint);transition:transform .18s ease;font-size:9px}
+  .grp.closed .chev{transform:rotate(-90deg)}
+  .grp.closed .body{display:none}
+  .body{padding:2px 18px 18px}
+
+  .stopbar{position:relative;height:14px;border-radius:2px;margin:2px 0 16px;overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+  .hint{color:var(--faint);font-size:10px;line-height:1.55;margin:8px 0 4px}
+
+  /* color blocks: header + stacked R/G/B */
+  .cblock{padding:10px 0;border-bottom:1px solid var(--line2)}
+  .cblock:first-child{padding-top:2px}
+  .cblock:last-child{border-bottom:none;padding-bottom:2px}
+  .chead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .chip{width:16px;height:16px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+  .cname{font-family:var(--mono);font-size:11px;color:var(--ink);letter-spacing:.04em}
+  .chex{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--faint);
+    text-transform:uppercase}
+  .crow{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:8px;margin:5px 0}
+  .ctag{font-family:var(--mono);font-size:10px;font-weight:700}
+  .cval{grid-column:3;font-family:var(--mono);font-size:10px;color:var(--dim);
+    font-variant-numeric:tabular-nums;min-width:30px;text-align:right}
+  .crange{grid-column:2;-webkit-appearance:none;appearance:none;height:3px;
+    background:var(--field);border-radius:3px;outline:none;margin:0}
+  .crange::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+    background:#fff;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.25),inset 0 0 0 2px var(--h)}
+  .crange::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#fff;cursor:pointer;
+    border:2px solid var(--h);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+
+  /* generic rows */
+  .row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;margin:11px 0 4px}
+  .row label{color:var(--dim);letter-spacing:.02em}
+  .row .val{color:var(--ink);font-family:var(--mono);font-variant-numeric:tabular-nums;
+    min-width:44px;text-align:right;font-size:11px}
+  input[type=range]{grid-column:1/-1;-webkit-appearance:none;appearance:none;height:3px;
+    background:var(--field);border-radius:3px;outline:none;margin:6px 0 2px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
+    border-radius:50%;background:#fff;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.25),inset 0 0 0 1px var(--line)}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;
+    background:#fff;cursor:pointer;border:1px solid var(--line);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+
+  select,.btn{width:100%;background:var(--field);color:var(--ink);border:1px solid var(--line);
+    border-radius:4px;padding:9px 12px;font-family:var(--sans);font-size:11px;cursor:pointer;
+    letter-spacing:.02em}
+  select:hover,.btn:hover{border-color:#d0d0ce;background:#fff}
+  .btn{text-align:center;display:block;letter-spacing:.08em;text-transform:uppercase;font-size:10px;
+    color:var(--dim);font-weight:600}
+  .btn.accent{background:var(--accent-soft);border-color:#e6cfb4;color:var(--accent)}
+  .btn.accent:hover{border-color:var(--accent);background:#faefe1}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .drop{border:1.5px dashed #d3d3d0;border-radius:4px;padding:16px;text-align:center;
+    color:var(--dim);cursor:pointer;transition:.15s;font-size:10px;letter-spacing:.04em}
+  .drop.hot{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+  #imgprev{width:100%;border-radius:4px;margin-top:10px;display:none;
+    box-shadow:0 1px 3px rgba(0,0,0,.1)}
+  input[type=file]{display:none}
+  .cols5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+  .cols5 div{aspect-ratio:1;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+
+  /* ---------- phone experience (hidden on desktop) ---------- */
+  #intro,#fab,#rotate{display:none}
+
+  body.phone #panel,body.phone #title,body.phone #clock,body.phone #hkey{display:none!important}
+
+  /* intro card */
+  body.phone #intro{display:flex;position:fixed;inset:0;z-index:30;
+    align-items:center;justify-content:center;padding:32px;
+    background:rgba(6,6,8,.34)}
+  body.phone.started #intro{display:none}
+  .introcard{max-width:340px;text-align:center;color:#fff}
+  .introtitle{font-family:var(--mono);font-size:13px;letter-spacing:.28em;
+    line-height:1.7;margin-bottom:22px}
+  .introtext{font-family:var(--sans);font-size:16px;line-height:1.5;opacity:.92;margin:0 0 26px}
+  .introbtn{font-family:var(--sans);font-size:15px;letter-spacing:.02em;
+    color:#20242a;background:#fff;border:none;border-radius:999px;
+    padding:15px 30px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .introbtn:active{transform:scale(.97)}
+  .introsmall{font-family:var(--sans);font-size:11px;opacity:.6;margin:20px 0 0}
+
+  /* floating upload button */
+  body.phone.started #fab{display:flex;position:fixed;z-index:20;
+    right:20px;bottom:calc(20px + env(safe-area-inset-bottom));
+    width:56px;height:56px;border-radius:50%;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.3);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    cursor:pointer;-webkit-tap-highlight-color:transparent;
+    box-shadow:0 4px 20px rgba(0,0,0,.3)}
+  body.phone.started #fab:active{transform:scale(.94);background:rgba(255,255,255,.24)}
+
+  /* rotate nag — portrait only */
+  @media (orientation:landscape){
+    body.phone #rotate{display:flex;position:fixed;inset:0;z-index:40;
+      align-items:center;justify-content:center;background:#08080a}
+  }
+  .rotinner{text-align:center;color:#fff;opacity:.85}
+  .rotinner p{font-family:var(--sans);font-size:14px;letter-spacing:.04em;margin-top:16px}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="gl"></canvas>
+  </div>
+  <div id="title">I NEEDED A PLACE TO BREATHE</div>
+  <div id="clock">--:--:--</div>
+  <div id="hkey">H · show</div>
+
+  <!-- phone-only overlays -->
+  <div id="intro">
+    <div class="introcard">
+      <div class="introtitle">I NEEDED A PLACE TO BREATHE</div>
+      <p class="introtext">Upload a photo to color the space.</p>
+      <button class="introbtn" id="introStart">Choose a photo</button>
+      <p class="introsmall">your photo isn't saved — only its colors are used</p>
+    </div>
+  </div>
+  <button id="fab" aria-label="upload a photo">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+      stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 7h3l1.5-2h7L18 7h2a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
+      <circle cx="12" cy="13" r="3.2"/>
+    </svg>
+  </button>
+  <div id="rotate">
+    <div class="rotinner">
+      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor"
+        stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="7" y="2.5" width="10" height="19" rx="2"/>
+        <path d="M12 18.5h.01"/>
+      </svg>
+      <p>Please hold your phone upright</p>
+    </div>
+  </div>
+
+  <div id="panel">
+    <!-- PALETTE -->
+    <div class="grp" id="g-pal">
+      <h3 data-t>Palette <span class="chev">▾</span></h3>
+      <div class="body">
+        <div class="stopbar" id="rampbar"></div>
+        <div class="swatches" id="swatches"></div>
+        <div class="hint">Colors are laid along the radius (center → edge). c0 is the core,
+          c4 the outer field. Stops below set where each takes over; bleed softens the seams.</div>
+        <button class="btn" id="resetMode" style="margin-top:4px">reset palette</button>
+      </div>
+    </div>
+
+    <!-- IMAGE EXTRACT -->
+    <div class="grp" id="g-img">
+      <h3 data-t>Extract from image <span class="chev">▾</span></h3>
+      <div class="body">
+        <div class="drop" id="drop">drop an image or click to upload</div>
+        <input type="file" id="file" accept="image/*">
+        <img id="imgprev" alt="">
+        <div class="cols5" id="extracted" style="display:none"></div>
+        <div class="two" style="margin-top:10px">
+          <button class="btn" id="reextract" style="display:none">re-extract</button>
+          <button class="btn accent" id="apply" style="display:none">apply</button>
+        </div>
+        <div class="hint" style="margin-top:12px">Pulls the 5 dominant colors (median-cut),
+          orders them light→dark, and maps them onto c0→c4.</div>
+      </div>
+    </div>
+
+    <!-- STOPS -->
+    <div class="grp closed" id="g-stops">
+      <h3 data-t>Stops &amp; blend <span class="chev">▾</span></h3>
+      <div class="body" id="stopsBody"></div>
+    </div>
+
+    <!-- SHAPE -->
+    <div class="grp closed" id="g-shape">
+      <h3 data-t>Shape &amp; warp <span class="chev">▾</span></h3>
+      <div class="body" id="shapeBody"></div>
+    </div>
+
+    <!-- HIGHLIGHT -->
+    <div class="grp closed" id="g-hi">
+      <h3 data-t>Highlight <span class="chev">▾</span></h3>
+      <div class="body" id="hiBody"></div>
+    </div>
+
+    <!-- GRADE + DRIFT -->
+    <div class="grp closed" id="g-grade">
+      <h3 data-t>Grade &amp; hue drift <span class="chev">▾</span></h3>
+      <div class="body" id="gradeBody"></div>
+    </div>
+
+    <div class="grp"><div class="body" style="padding-top:16px">
+      <div class="two" style="margin-bottom:8px">
+        <button class="btn" id="fs">fullscreen</button>
+        <button class="btn" id="hide">hide · H</button>
+      </div>
+      <button class="btn accent" id="reset">reset all</button>
+    </div></div>
+  </div>
+
+<script>
+/* ---------- palette: single mode ---------- */
+const PALETTES = [
+  [[1.00,0.55,0.20],[1.00,0.42,0.13],[1.00,0.25,0.55],[0.70,0.35,0.85],[0.55,0.65,0.92]],
+];
+const PALETTES_DEFAULT = JSON.parse(JSON.stringify(PALETTES));
+let mode = 0; // active mode being edited & rendered
+
+/* ---------- state ---------- */
+const P = {
+  // c0..c4 are proxies onto PALETTES[mode]; kept in sync by syncColorsFromMode()
+  c0:[1.00,0.55,0.20], c1:[1.00,0.42,0.13], c2:[1.00,0.25,0.55],
+  c3:[0.70,0.35,0.85], c4:[0.55,0.65,0.92],
+  stop1:0.18, stop2:1.132, stop3:1.148, stop4:0.70, bleed:1.125,
+  centerX:0.0, centerY:0.0, stretchX:1.15, scale:1.0, rotation:0.0,
+  asymUp:0.0, asymDown:1.0,
+  warpAmount:1.0, warpFreq:4.0, warpSpeed:0.2,
+  hiColor:[0.00,0.185,0.40], hiAmount:0.55, hiRadius:0.25, hiWidth:1.12,
+  hiAngle:0.05708, hiSpread:0.55,
+  vignette:0.12, gamma:1.0, exposure:1.0,
+  hueDrift:0.035, cyclePeriod:28800.0, driftUsesClock:1.0,
+};
+const DEFAULT = JSON.parse(JSON.stringify(P));
+
+// pull the active mode's 5 colors into P.c0..c4 (what the shader reads)
+function syncColorsFromMode(){
+  const cols = PALETTES[mode];
+  ['c0','c1','c2','c3','c4'].forEach((k,i)=>P[k]=cols[i]);
+}
+syncColorsFromMode();
+
+/* ---------- color helpers ---------- */
+const to255 = v => Math.round(Math.min(1,Math.max(0,v))*255);
+const rgbToHex = a => '#'+a.map(to255).map(x=>x.toString(16).padStart(2,'0')).join('');
+const hexToRgb = h => { h=h.replace('#',''); return [0,2,4].map(i=>parseInt(h.substr(i,2),16)/255); };
+const lum = a => 0.2126*a[0]+0.7152*a[1]+0.0722*a[2];
+
+/* ---------- WebGL ---------- */
+const canvas = document.getElementById('gl');
+const gl = canvas.getContext('webgl2', {antialias:false, preserveDrawingBuffer:false});
+if(!gl){ document.body.innerHTML='<p style="padding:20px">WebGL2 not available in this browser.</p>'; }
+
+const VERT = `#version 300 es
+in vec2 pos; void main(){ gl_Position=vec4(pos,0.0,1.0); }`;
+
+const FRAG = `#version 300 es
+precision highp float;
+out vec4 fragColor;
+uniform vec2 iResolution;
+uniform float iTime;
+uniform vec4 iDate;
+
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+uniform float u_stop1,u_stop2,u_stop3,u_stop4,u_bleed;
+uniform float u_centerX,u_centerY,u_stretchX,u_scale,u_rotation,u_asymUp,u_asymDown;
+uniform float u_warpAmount,u_warpFreq,u_warpSpeed;
+uniform vec3 u_highlightColor;
+uniform float u_highlightAmount,u_highlightRadius,u_highlightWidth,u_highlightAngle,u_highlightSpread;
+uniform float u_vignette,u_gamma,u_exposure;
+uniform float u_hueDrift,u_cyclePeriod,u_driftUsesClock;
+
+float sstep(float a,float b,float x){float t=clamp((x-a)/(b-a),0.0,1.0);return t*t*t*(t*(t*6.0-15.0)+10.0);}
+vec3 rgb2hsv(vec3 c){vec4 K=vec4(0.0,-1.0/3.0,2.0/3.0,-1.0);
+ vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g));
+ vec4 q=mix(vec4(p.xyw,c.r),vec4(c.r,p.yzx),step(p.x,c.r));
+ float d=q.x-min(q.w,q.y);float e=1.0e-10;
+ return vec3(abs(q.z+(q.w-q.y)/(6.0*d+e)),d/(q.x+e),q.x);}
+vec3 hsv2rgb(vec3 c){vec4 K=vec4(1.0,2.0/3.0,1.0/3.0,3.0);
+ vec3 p=abs(fract(c.xxx+K.xyz)*6.0-K.www);
+ return c.z*mix(K.xxx,clamp(p-K.xxx,0.0,1.0),c.y);}
+vec3 shiftHue(vec3 col,float dh){vec3 h=rgb2hsv(col);h.x=fract(h.x+dh);return hsv2rgb(h);}
+
+vec3 palette(float r,float hs){
+  vec3 c0=shiftHue(u_c0,hs),c1=shiftHue(u_c1,hs),c2=shiftHue(u_c2,hs),
+       c3=shiftHue(u_c3,hs),c4=shiftHue(u_c4,hs);
+  float b=u_bleed*1.5;
+  vec3 col=c0;
+  col=mix(col,c1,sstep(u_stop1-b,u_stop1+b,r));
+  col=mix(col,c2,sstep(u_stop2-b,u_stop2+b,r));
+  col=mix(col,c3,sstep(u_stop3-b,u_stop3+b,r));
+  col=mix(col,c4,sstep(u_stop4-b,u_stop4+b,r));
+  return col;
+}
+float hash(vec2 p){p=fract(p*vec2(443.897,441.423));p+=dot(p,p+19.19);return fract(p.x*p.y);}
+mat2 rot(float a){float c=cos(a),s=sin(a);return mat2(c,-s,s,c);}
+
+void main(){
+  vec2 fragCoord=gl_FragCoord.xy;
+  vec2 uv=(fragCoord-0.5*iResolution.xy)/iResolution.y;
+  vec2 p=uv-vec2(u_centerX,u_centerY);
+  p=rot(u_rotation)*p; p.x*=u_stretchX; p/=u_scale;
+  p.y=p.y>0.0?p.y*u_asymUp:p.y*u_asymDown;
+  float r=length(p);
+  float wt=iTime*u_warpSpeed;
+  float warp=sin(uv.x*u_warpFreq+wt)*cos(uv.y*u_warpFreq*0.7+wt*1.3);
+  r+=warp*u_warpAmount;
+  float clock=(u_driftUsesClock>0.5)?iDate.w:iTime;
+  float phase=(clock/u_cyclePeriod)*6.28318530718;
+  float hueShift=sin(phase)*u_hueDrift;
+  vec3 col=palette(r,hueShift);
+  float ring=sstep(u_highlightRadius-u_highlightWidth,u_highlightRadius,r)
+            *sstep(u_highlightRadius+u_highlightWidth,u_highlightRadius,r);
+  vec2 dir=vec2(cos(u_highlightAngle),sin(u_highlightAngle));
+  vec2 nrm=length(p)>0.001?normalize(p):vec2(0.0,1.0);
+  float ang=max(dot(nrm,dir),0.0);
+  ang=pow(ang,mix(8.0,1.0,u_highlightSpread));
+  vec3 hi=shiftHue(u_highlightColor,hueShift);
+  col=mix(col,hi,ring*ang*u_highlightAmount);
+  float vig=1.0-smoothstep(0.4,1.1,length(uv))*u_vignette;
+  col*=vig;
+  col*=u_exposure;
+  col=pow(max(col,0.0),vec3(1.0/u_gamma));
+  fragColor=vec4(col,1.0);
+}`;
+
+function compile(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(s));return s;}
+const prog=gl.createProgram();
+gl.attachShader(prog,compile(gl.VERTEX_SHADER,VERT));
+gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,FRAG));
+gl.linkProgram(prog);
+if(!gl.getProgramParameter(prog,gl.LINK_STATUS))console.error(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+
+const buf=gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+const loc=gl.getAttribLocation(prog,'pos');
+gl.enableVertexAttribArray(loc);
+gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+
+const U={};
+['iResolution','iTime','iDate','u_c0','u_c1','u_c2','u_c3','u_c4',
+ 'u_stop1','u_stop2','u_stop3','u_stop4','u_bleed','u_centerX','u_centerY',
+ 'u_stretchX','u_scale','u_rotation','u_asymUp','u_asymDown',
+ 'u_warpAmount','u_warpFreq','u_warpSpeed','u_highlightColor','u_highlightAmount',
+ 'u_highlightRadius','u_highlightWidth','u_highlightAngle','u_highlightSpread',
+ 'u_vignette','u_gamma','u_exposure','u_hueDrift','u_cyclePeriod','u_driftUsesClock']
+ .forEach(n=>U[n]=gl.getUniformLocation(prog,n));
+
+function resize(){
+  const dpr=Math.min(devicePixelRatio||1,2);
+  const w=canvas.clientWidth*dpr, h=canvas.clientHeight*dpr;
+  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}
+}
+window.addEventListener('resize',resize);
+
+const start=performance.now();
+function frame(){
+  resize();
+  const t=(performance.now()-start)/1000;
+  const d=new Date();
+  const secOfDay=d.getHours()*3600+d.getMinutes()*60+d.getSeconds()+d.getMilliseconds()/1000;
+  gl.uniform2f(U.iResolution,canvas.width,canvas.height);
+  gl.uniform1f(U.iTime,t);
+  gl.uniform4f(U.iDate,d.getFullYear(),d.getMonth(),d.getDate(),secOfDay);
+  gl.uniform3fv(U.u_c0,P.c0); gl.uniform3fv(U.u_c1,P.c1); gl.uniform3fv(U.u_c2,P.c2);
+  gl.uniform3fv(U.u_c3,P.c3); gl.uniform3fv(U.u_c4,P.c4);
+  gl.uniform1f(U.u_stop1,P.stop1); gl.uniform1f(U.u_stop2,P.stop2);
+  gl.uniform1f(U.u_stop3,P.stop3); gl.uniform1f(U.u_stop4,P.stop4);
+  gl.uniform1f(U.u_bleed,P.bleed);
+  gl.uniform1f(U.u_centerX,P.centerX); gl.uniform1f(U.u_centerY,P.centerY);
+  gl.uniform1f(U.u_stretchX,P.stretchX); gl.uniform1f(U.u_scale,P.scale);
+  gl.uniform1f(U.u_rotation,P.rotation);
+  gl.uniform1f(U.u_asymUp,P.asymUp); gl.uniform1f(U.u_asymDown,P.asymDown);
+  gl.uniform1f(U.u_warpAmount,P.warpAmount); gl.uniform1f(U.u_warpFreq,P.warpFreq);
+  gl.uniform1f(U.u_warpSpeed,P.warpSpeed);
+  gl.uniform3fv(U.u_highlightColor,P.hiColor);
+  gl.uniform1f(U.u_highlightAmount,P.hiAmount); gl.uniform1f(U.u_highlightRadius,P.hiRadius);
+  gl.uniform1f(U.u_highlightWidth,P.hiWidth); gl.uniform1f(U.u_highlightAngle,P.hiAngle);
+  gl.uniform1f(U.u_highlightSpread,P.hiSpread);
+  gl.uniform1f(U.u_vignette,P.vignette); gl.uniform1f(U.u_gamma,P.gamma);
+  gl.uniform1f(U.u_exposure,P.exposure);
+  gl.uniform1f(U.u_hueDrift,P.hueDrift); gl.uniform1f(U.u_cyclePeriod,P.cyclePeriod);
+  gl.uniform1f(U.u_driftUsesClock,P.driftUsesClock);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+  const hh=String(d.getHours()).padStart(2,'0'),mm=String(d.getMinutes()).padStart(2,'0'),
+        ss=String(d.getSeconds()).padStart(2,'0');
+  clockEl.textContent=`${hh}:${mm}:${ss} · drift ${(Math.sin(secOfDay/P.cyclePeriod*6.283)*P.hueDrift*360).toFixed(1)}°`;
+  requestAnimationFrame(frame);
+}
+
+/* ---------- UI build ---------- */
+const clockEl=document.getElementById('clock');
+const swWrap=document.getElementById('swatches');
+const rampbar=document.getElementById('rampbar');
+const keys=['c0','c1','c2','c3','c4'];
+
+const chanEls=[]; // [ci] -> {chip, sliders:[r,g,b], vals:[r,g,b]}
+const CHAN=['R','G','B'];
+const CHAN_HUE=['#d24b3e','#3fae5a','#3f78d2'];
+
+keys.forEach((k,ci)=>{
+  const block=document.createElement('div'); block.className='cblock';
+
+  const head=document.createElement('div'); head.className='chead';
+  const chip=document.createElement('span'); chip.className='chip'; chip.style.background=rgbToHex(P[k]);
+  const name=document.createElement('span'); name.className='cname'; name.textContent='c'+ci;
+  const hexlbl=document.createElement('span'); hexlbl.className='chex'; hexlbl.textContent=rgbToHex(P[k]);
+  head.append(chip,name,hexlbl); block.append(head);
+
+  const sliders=[], vals=[];
+  for(let ch=0;ch<3;ch++){
+    const row=document.createElement('div'); row.className='crow';
+    const tag=document.createElement('span'); tag.className='ctag'; tag.textContent=CHAN[ch];
+    tag.style.color=CHAN_HUE[ch];
+    const val=document.createElement('span'); val.className='cval'; val.textContent=P[k][ch].toFixed(2);
+    const r=document.createElement('input'); r.type='range'; r.min=0; r.max=1; r.step=0.01;
+    r.value=P[k][ch]; r.className='crange';
+    r.style.setProperty('--h',CHAN_HUE[ch]);
+    r.addEventListener('input',e=>{
+      const v=parseFloat(e.target.value);
+      PALETTES[mode][ci][ch]=v;
+      syncColorsFromMode();
+      val.textContent=v.toFixed(2);
+      const hex=rgbToHex(P[k]); chip.style.background=hex; hexlbl.textContent=hex;
+      updateRamp();
+    });
+    row.append(tag,val,r); block.append(row);
+    sliders.push(r); vals.push(val);
+  }
+  chanEls.push({chip,hexlbl,sliders,vals});
+  swWrap.append(block);
+});
+
+function refreshSwatches(){
+  keys.forEach((k,ci)=>{
+    const e=chanEls[ci];
+    const hex=rgbToHex(P[k]); e.chip.style.background=hex; e.hexlbl.textContent=hex;
+    for(let ch=0;ch<3;ch++){ e.sliders[ch].value=P[k][ch]; e.vals[ch].textContent=P[k][ch].toFixed(2); }
+  });
+  updateRamp();
+}
+function updateRamp(){
+  const stops=[[0,P.c0]];
+  const s=[P.stop1,P.stop2,P.stop3,P.stop4].map(v=>Math.min(1,Math.max(0,v/1.2)));
+  stops.push([s[0],P.c1],[s[1]<s[0]?s[0]:s[1],P.c2],[s[2],P.c3],[s[3],P.c4]);
+  stops.sort((a,b)=>a[0]-b[0]);
+  const g=stops.map(([pos,c])=>`${rgbToHex(c)} ${(pos*100).toFixed(0)}%`).join(',');
+  rampbar.style.background=`linear-gradient(90deg,${g})`;
+}
+
+/* sliders */
+function slider(parent,key,label,min,max,step){
+  const row=document.createElement('div'); row.className='row';
+  const l=document.createElement('label'); l.textContent=label;
+  const v=document.createElement('span'); v.className='val'; v.textContent=(+P[key]).toFixed(step<1?2:0);
+  const r=document.createElement('input'); r.type='range'; r.min=min; r.max=max; r.step=step; r.value=P[key];
+  r.addEventListener('input',e=>{P[key]=parseFloat(e.target.value);v.textContent=(+P[key]).toFixed(step<1?2:0);});
+  row.append(l,v,r); parent.append(row);
+  return {set:val=>{r.value=val;v.textContent=(+val).toFixed(step<1?2:0);}};
+}
+const setters={};
+const sb=document.getElementById('stopsBody');
+setters.stop1=slider(sb,'stop1','stop 1',0,1.5,0.001);
+setters.stop2=slider(sb,'stop2','stop 2',0,1.5,0.001);
+setters.stop3=slider(sb,'stop3','stop 3',0,1.5,0.001);
+setters.stop4=slider(sb,'stop4','stop 4',0,1.5,0.001);
+setters.bleed=slider(sb,'bleed','bleed',0.001,2,0.001);
+
+const shb=document.getElementById('shapeBody');
+setters.scale=slider(shb,'scale','scale',0.2,3,0.01);
+setters.stretchX=slider(shb,'stretchX','stretch x',0.2,3,0.01);
+setters.rotation=slider(shb,'rotation','rotation',-3.1416,3.1416,0.01);
+setters.centerX=slider(shb,'centerX','center x',-1,1,0.01);
+setters.centerY=slider(shb,'centerY','center y',-1,1,0.01);
+setters.asymUp=slider(shb,'asymUp','asym up',0,2,0.01);
+setters.asymDown=slider(shb,'asymDown','asym down',0,2,0.01);
+setters.warpAmount=slider(shb,'warpAmount','warp amt',0,3,0.01);
+setters.warpFreq=slider(shb,'warpFreq','warp freq',0,12,0.1);
+setters.warpSpeed=slider(shb,'warpSpeed','warp speed',0,2,0.01);
+
+const hib=document.getElementById('hiBody');
+// highlight color picker
+(function(){
+  const row=document.createElement('div');row.className='row';
+  const l=document.createElement('label');l.textContent='color';
+  const inp=document.createElement('input');inp.type='color';inp.value=rgbToHex(P.hiColor);
+  inp.style.gridColumn='2';inp.style.width='46px';inp.style.height='24px';inp.style.background='none';inp.style.border='none';inp.style.padding='0';inp.style.cursor='pointer';
+  inp.addEventListener('input',e=>P.hiColor=hexToRgb(e.target.value));
+  row.append(l,inp);hib.append(row);
+})();
+setters.hiAmount=slider(hib,'hiAmount','amount',0,2,0.01);
+setters.hiRadius=slider(hib,'hiRadius','radius',0,1.5,0.01);
+setters.hiWidth=slider(hib,'hiWidth','width',0.01,2,0.01);
+setters.hiAngle=slider(hib,'hiAngle','angle',-3.1416,3.1416,0.01);
+setters.hiSpread=slider(hib,'hiSpread','spread',0,1,0.01);
+
+const grb=document.getElementById('gradeBody');
+setters.exposure=slider(grb,'exposure','exposure',0.2,3,0.01);
+setters.gamma=slider(grb,'gamma','gamma',0.2,3,0.01);
+setters.vignette=slider(grb,'vignette','vignette',0,1,0.01);
+setters.hueDrift=slider(grb,'hueDrift','hue drift',0,0.3,0.001);
+// drift clock toggle + period
+(function(){
+  const row=document.createElement('div');row.className='row';
+  const l=document.createElement('label');l.textContent='drift clock';
+  const b=document.createElement('button');b.className='btn';b.style.width='auto';b.style.padding='5px 10px';
+  b.textContent=P.driftUsesClock>0.5?'wall clock':'iTime';
+  b.addEventListener('click',()=>{P.driftUsesClock=P.driftUsesClock>0.5?0:1;b.textContent=P.driftUsesClock>0.5?'wall clock':'iTime';});
+  row.append(l,b);grb.append(row);
+})();
+setters.cyclePeriod=slider(grb,'cyclePeriod','cycle (s)',60,28800,60);
+
+/* reset palette colors to factory sunset */
+document.getElementById('resetMode').addEventListener('click',()=>{
+  PALETTES[mode]=JSON.parse(JSON.stringify(PALETTES_DEFAULT[mode]));
+  syncColorsFromMode();
+  refreshSwatches();
+});
+
+/* collapsible groups */
+document.querySelectorAll('.grp > h3').forEach(h=>{
+  h.addEventListener('click',()=>h.parentElement.classList.toggle('closed'));
+});
+
+/* ---------- hide UI + fullscreen ---------- */
+function toggleUI(force){
+  const hide = (force===undefined) ? !document.body.classList.contains('hidden') : force;
+  document.body.classList.toggle('hidden', hide);
+}
+document.getElementById('hide').addEventListener('click',()=>toggleUI(true));
+function toggleFS(){
+  if(!document.fullscreenElement){ document.documentElement.requestFullscreen?.(); }
+  else { document.exitFullscreen?.(); }
+}
+document.getElementById('fs').addEventListener('click',toggleFS);
+
+/* keyboard: H = hide/show UI, F = fullscreen. Ignore while typing in a field. */
+window.addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='select'||tag==='textarea') return;
+  const k=e.key.toLowerCase();
+  if(k==='h'){ e.preventDefault(); toggleUI(); }
+  else if(k==='f'){ e.preventDefault(); toggleFS(); }
+});
+
+/* reset */
+document.getElementById('reset').addEventListener('click',()=>{
+  Object.assign(P,JSON.parse(JSON.stringify(DEFAULT)));
+  for(let i=0;i<PALETTES.length;i++) PALETTES[i]=JSON.parse(JSON.stringify(PALETTES_DEFAULT[i]));
+  syncColorsFromMode();
+  refreshSwatches();
+  for(const k in setters) setters[k].set(P[k]);
+});
+
+/* ---------- image color extraction (median cut) ---------- */
+const drop=document.getElementById('drop');
+const fileInp=document.getElementById('file');
+const imgPrev=document.getElementById('imgprev');
+const extractedWrap=document.getElementById('extracted');
+const applyBtn=document.getElementById('apply');
+const reBtn=document.getElementById('reextract');
+let extracted=[];
+let lastImg=null;
+
+function medianCut(pixels,depth){
+  if(depth===0||pixels.length===0){
+    const avg=[0,0,0];pixels.forEach(p=>{avg[0]+=p[0];avg[1]+=p[1];avg[2]+=p[2];});
+    const n=Math.max(1,pixels.length);
+    return [[avg[0]/n/255,avg[1]/n/255,avg[2]/n/255]];
+  }
+  let rng=[0,1,2].map(c=>{let mn=255,mx=0;pixels.forEach(p=>{mn=Math.min(mn,p[c]);mx=Math.max(mx,p[c]);});return mx-mn;});
+  const ch=rng.indexOf(Math.max(...rng));
+  pixels.sort((a,b)=>a[ch]-b[ch]);
+  const mid=pixels.length>>1;
+  return medianCut(pixels.slice(0,mid),depth-1).concat(medianCut(pixels.slice(mid),depth-1));
+}
+
+function extractColors(img){
+  const c=document.createElement('canvas');
+  const scale=Math.min(1,120/Math.max(img.width,img.height));
+  c.width=Math.max(1,img.width*scale|0); c.height=Math.max(1,img.height*scale|0);
+  const cx=c.getContext('2d'); cx.drawImage(img,0,0,c.width,c.height);
+  const data=cx.getImageData(0,0,c.width,c.height).data;
+  const px=[];
+  for(let i=0;i<data.length;i+=4){
+    if(data[i+3]<125) continue;
+    px.push([data[i],data[i+1],data[i+2]]);
+  }
+  let cols=medianCut(px,3);            // 2^3 = 8 buckets
+  cols.sort((a,b)=>lum(b)-lum(a));     // light → dark
+  // pick 5 spread across the sorted 8
+  const idx=[0,1,3,5,7].map(i=>Math.min(cols.length-1,i));
+  extracted=idx.map(i=>cols[i]);
+  extractedWrap.style.display='grid';
+  extractedWrap.innerHTML='';
+  extracted.forEach(c=>{const d=document.createElement('div');d.style.background=rgbToHex(c);extractedWrap.append(d);});
+  applyBtn.style.display='block'; reBtn.style.display='block';
+}
+
+function loadFile(f){
+  if(!f||!f.type.startsWith('image/'))return;
+  const url=URL.createObjectURL(f);
+  const img=new Image();
+  img.onload=()=>{imgPrev.src=url;imgPrev.style.display='block';lastImg=img;extractColors(img);};
+  img.src=url;
+}
+drop.addEventListener('click',()=>fileInp.click());
+fileInp.addEventListener('change',e=>loadFile(e.target.files[0]));
+['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot');}));
+drop.addEventListener('drop',e=>loadFile(e.dataTransfer.files[0]));
+reBtn.addEventListener('click',()=>{if(lastImg)extractColors(lastImg);});
+function applyExtracted(){
+  extracted.forEach((c,i)=>PALETTES[mode][i]=c.slice());
+  syncColorsFromMode();
+  refreshSwatches();
+}
+applyBtn.addEventListener('click',applyExtracted);
+
+/* ---------- phone experience ---------- */
+const isPhone = (()=>{
+  const coarse = matchMedia('(pointer:coarse)').matches;
+  const small = Math.min(screen.width,screen.height) < 820;
+  const ua = /iphone|ipod|android.*mobile|windows phone/i.test(navigator.userAgent);
+  return ua || (coarse && small);
+})();
+
+if(isPhone){
+  document.body.classList.add('phone');
+  const intro=document.getElementById('intro');
+  const introStart=document.getElementById('introStart');
+  const fab=document.getElementById('fab');
+  // both intro button and FAB open the native photo picker
+  introStart.addEventListener('click',()=>fileInp.click());
+  fab.addEventListener('click',()=>fileInp.click());
+  // on phone, a picked photo extracts AND applies immediately, then reveals the field
+  fileInp.addEventListener('change',()=>{
+    // loadFile already ran via the desktop listener; apply once extraction is ready
+    // extractColors is synchronous once the image decodes, so defer apply to next tick
+    const applyWhenReady=()=>{
+      if(extracted.length){ applyExtracted(); document.body.classList.add('started'); }
+      else setTimeout(applyWhenReady,60);
+    };
+    setTimeout(applyWhenReady,60);
+  });
+}
+
+/* go */
+updateRamp();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
