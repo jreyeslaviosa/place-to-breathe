@@ -131,15 +131,15 @@
   .introby{font-family:var(--sans);font-size:12px;letter-spacing:.06em;opacity:.7;
     margin:0 0 22px}
   .introtext{font-family:var(--sans);font-size:15px;line-height:1.6;opacity:.9;margin:0 0 28px}
-  .introactions{display:flex;flex-direction:column;gap:0}
-  .introbtn{font-family:var(--sans);font-size:15px;letter-spacing:.02em;
-    color:#20242a;background:#fff;border:none;border-radius:999px;
-    padding:15px 30px;cursor:pointer;-webkit-tap-highlight-color:transparent}
-  .introbtn:active{transform:scale(.97)}
-  .introbtn.secondary{margin-top:12px;background:transparent;color:#fff;
-    border:1px solid rgba(255,255,255,.5)}
-  .introbtn.secondary:active{background:rgba(255,255,255,.12)}
-  .introsmall{font-family:var(--sans);font-size:11px;opacity:.6;margin:20px 0 0}
+  .introactions{display:flex;flex-direction:column;gap:14px;align-items:center}
+  .introbtn{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:#fff;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.35);
+    padding:8px 4px 9px;cursor:pointer;opacity:.82;-webkit-tap-highlight-color:transparent;
+    transition:opacity .2s,border-color .2s}
+  .introbtn:active{opacity:1;border-color:rgba(255,255,255,.9)}
+  .introbtn.secondary{opacity:.6}
+  .introbtn.secondary:active{opacity:.95}
+  .introsmall{font-family:var(--sans);font-size:11px;opacity:.5;margin:22px 0 0}
 
   /* back to Moa's palette — appears on the field only after a visitor upload */
   #backOriginal{display:none;position:fixed;z-index:20;left:50%;transform:translateX(-50%);
@@ -192,7 +192,9 @@
     margin:0 0 14px;padding-right:30px}
   .aboutmeta{font-family:var(--sans);font-size:12px;line-height:1.6;color:#6b7178;
     margin:0 0 20px;letter-spacing:.02em}
-  .abouttext{font-family:var(--sans);font-size:14px;line-height:1.72;color:#33383f;margin:0}
+  .abouttext{font-family:var(--sans);font-size:14px;line-height:1.72;color:#33383f;margin:0 0 14px}
+  .abouttext:last-child{margin-bottom:0}
+  .abouttext em{font-style:italic}
 </style>
 </head>
 <body>
@@ -237,13 +239,20 @@
       <h2 class="abouttitle">I needed a place to breathe</h2>
       <p class="aboutmeta">Jaime Reyes &amp; Moa · July 2026<br>
         Generative code and custom digital interface</p>
-      <p class="abouttext">Created in the wake of the devastation in La Guaira and Caracas, this
-        generative artwork serves as a digital sanctuary. Designed by the artist to capture the
-        sensory memories of their Venezuelan birthplace—the ocean breeze, the sunrises, and the
-        sounds—the piece was brought to life in collaboration with their daughter, Moa. While the
-        artist, who is colorblind, wrote the code and built a custom suite of tools, Moa translated
-        her parent's stories into the vibrant color palette you see, bridging physical distance and
-        generations through technology and art.</p>
+      <p class="abouttext"><em>I needed a place to breathe</em> was born out of a necessity to find
+        solace after the devastating events in my birthplace of Venezuela, specifically in La Guaira
+        and Caracas. Watching the destruction from afar, I needed to create a space where I could
+        return to the La Guaira of my memory: a place where I could almost feel the coastal breeze,
+        watch the sun set, and listen to the sounds of home.</p>
+      <p class="abouttext">This piece is a generative artwork, built entirely with code, but its soul
+        is a collaboration between myself and my daughter, Moa. Because I am colorblind, I knew I
+        could not accurately capture the visual warmth of my memories. Instead, I built the
+        underlying structure and created a custom set of interactive sliders and tools for Moa.
+        Though she has never been to Venezuela, she listened to my stories of the sunsets and the
+        beaches. With her deep passion for color, she took control of the interface, translating my
+        feelings and memories into the exact hues and gradients that define this piece.</p>
+      <p class="abouttext">This artwork is more than a visual landscape; it is a shared digital
+        heritage, an act of healing, and a father-daughter dialogue written in code.</p>
     </div>
   </div>
 
