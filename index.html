@@ -125,10 +125,13 @@
     align-items:center;justify-content:center;padding:32px;
     background:rgba(6,6,8,.34)}
   body.phone.started #intro{display:none}
-  .introcard{max-width:340px;text-align:center;color:#fff}
+  .introcard{max-width:360px;text-align:center;color:#fff}
   .introtitle{font-family:var(--mono);font-size:13px;letter-spacing:.28em;
-    line-height:1.7;margin-bottom:22px}
-  .introtext{font-family:var(--sans);font-size:16px;line-height:1.5;opacity:.92;margin:0 0 26px}
+    line-height:1.7;margin-bottom:10px}
+  .introby{font-family:var(--sans);font-size:12px;letter-spacing:.06em;opacity:.7;
+    margin:0 0 22px}
+  .introtext{font-family:var(--sans);font-size:15px;line-height:1.6;opacity:.9;margin:0 0 28px}
+  .introactions{display:flex;flex-direction:column;gap:0}
   .introbtn{font-family:var(--sans);font-size:15px;letter-spacing:.02em;
     color:#20242a;background:#fff;border:none;border-radius:999px;
     padding:15px 30px;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -204,11 +207,15 @@
   <div id="intro">
     <div class="introcard">
       <div class="introtitle">I NEEDED A PLACE TO BREATHE</div>
-      <p class="introtext">Upload a photo to color the space.</p>
-      <button class="introbtn" id="introStart">Choose a photo</button>
-      <button class="introbtn secondary" id="introOriginal">Moa's palette</button>
+      <p class="introby">Jaime Reyes &amp; Moa · 2026</p>
+      <p class="introtext">A generative artwork holding the colors of a Venezuelan coast —
+        the sea, the sunrises, the light. Its palette was painted by Moa, the artist's daughter.</p>
+      <div class="introactions">
+        <button class="introbtn" id="introOriginal">See Moa's palette</button>
+        <button class="introbtn secondary" id="introStart">Color it with your own photo</button>
+      </div>
       <p class="introsmall">your photo isn't saved — only its colors are used</p>
-      <button class="introabout" id="introAbout">About this work</button>
+      <button class="introabout" id="introAbout">Read about this work</button>
     </div>
   </div>
   <button id="fab" aria-label="upload a photo">
