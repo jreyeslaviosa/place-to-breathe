@@ -141,25 +141,21 @@
   .introbtn.secondary:active{opacity:.95}
   .introsmall{font-family:var(--sans);font-size:11px;opacity:.5;margin:22px 0 0}
 
-  /* back to Moa's palette — appears on the field only after a visitor upload */
-  #backOriginal{display:none;position:fixed;z-index:20;left:50%;transform:translateX(-50%);
-    bottom:calc(24px + env(safe-area-inset-bottom));
-    background:none;border:none;color:#fff;opacity:.7;
+  /* subtle field links, bottom-center — shared quiet style */
+  #fab,#backOriginal{display:none;position:fixed;z-index:20;left:50%;transform:translateX(-50%);
+    background:none;border:none;color:#fff;
     font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
     cursor:pointer;-webkit-tap-highlight-color:transparent;padding:8px 10px;
     text-shadow:0 1px 3px rgba(0,0,0,.4)}
-  #backOriginal:active{opacity:1}
-  body.phone.started.recolored #backOriginal{display:block}
+  #fab:active,#backOriginal:active{opacity:1!important}
 
-  /* floating upload button */
-  body.phone.started #fab{display:flex;position:fixed;z-index:20;
-    right:20px;bottom:calc(20px + env(safe-area-inset-bottom));
-    width:56px;height:56px;border-radius:50%;align-items:center;justify-content:center;
-    background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.3);
-    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-    cursor:pointer;-webkit-tap-highlight-color:transparent;
-    box-shadow:0 4px 20px rgba(0,0,0,.3)}
-  body.phone.started #fab:active{transform:scale(.94);background:rgba(255,255,255,.24)}
+  /* upload link: always available once the field is shown, lowest position */
+  body.phone.started #fab{display:block;opacity:.72;
+    bottom:calc(22px + env(safe-area-inset-bottom))}
+  /* back link: only after a visitor upload, sits just above the upload link */
+  #backOriginal{opacity:.6}
+  body.phone.started.recolored #backOriginal{display:block;
+    bottom:calc(56px + env(safe-area-inset-bottom))}
 
   /* rotate nag — portrait only */
   @media (orientation:landscape){
@@ -220,13 +216,7 @@
       <button class="introabout" id="introAbout">Read about this work</button>
     </div>
   </div>
-  <button id="fab" aria-label="upload a photo">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
-      stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 7h3l1.5-2h7L18 7h2a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
-      <circle cx="12" cy="13" r="3.2"/>
-    </svg>
-  </button>
+  <button id="fab">upload a photo</button>
   <button id="backOriginal">back to Moa's palette</button>
 
   <!-- about overlay -->
